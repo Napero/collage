@@ -319,6 +319,7 @@
             <canvas id="resultCanvas"></canvas>
             <div class="button-group" style="margin-top: 20px;">
                 <button class="btn-primary" id="downloadBtn">Descargar imagen</button>
+                <button class="btn-secondary" id="openBtn">Abrir en nueva pestaña</button>
             </div>
         </div>
     </div>
@@ -336,6 +337,7 @@
         const resultArea = document.getElementById('resultArea');
         const resultCanvas = document.getElementById('resultCanvas');
         const downloadBtn = document.getElementById('downloadBtn');
+        const openBtn = document.getElementById('openBtn');
         const loading = document.getElementById('loading');
 
         // Upload area click
@@ -463,15 +465,35 @@
 
         function combineGrid() {
             const numImages = selectedImages.length;
-            const gridSize = Math.ceil(Math.sqrt(numImages));
+            
+            // Find optimal grid dimensions with minimal empty spaces, prioritizing horizontal layouts
+            let bestCols = 1, bestRows = 1;
+            let minWasted = numImages;
+            
+            // Try different column counts, prioritizing wider layouts
+            for (let cols = Math.ceil(Math.sqrt(numImages)); cols <= numImages; cols++) {
+                const rows = Math.ceil(numImages / cols);
+                const totalCells = cols * rows;
+                const wasted = totalCells - numImages;
+                
+                // Prefer horizontal layouts (cols >= rows) and minimize wasted space
+                if (wasted < minWasted || (wasted === minWasted && cols > bestCols)) {
+                    minWasted = wasted;
+                    bestCols = cols;
+                    bestRows = rows;
+                }
+                
+                // Stop if we find a perfect fit with horizontal orientation
+                if (wasted === 0 && cols >= rows) break;
+            }
             
             // Find max dimensions to make cells uniform
             const maxWidth = Math.max(...selectedImages.map(img => img.img.width));
             const maxHeight = Math.max(...selectedImages.map(img => img.img.height));
             const cellSize = Math.max(maxWidth, maxHeight);
 
-            resultCanvas.width = gridSize * cellSize;
-            resultCanvas.height = gridSize * cellSize;
+            resultCanvas.width = bestCols * cellSize;
+            resultCanvas.height = bestRows * cellSize;
 
             const ctx = resultCanvas.getContext('2d');
             ctx.fillStyle = '#000000';
@@ -479,8 +501,8 @@
 
             selectedImages.forEach((imageData, index) => {
                 const img = imageData.img;
-                const row = Math.floor(index / gridSize);
-                const col = index % gridSize;
+                const row = Math.floor(index / bestCols);
+                const col = index % bestCols;
                 
                 const scale = Math.min(cellSize / img.width, cellSize / img.height);
                 const scaledWidth = img.width * scale;
@@ -499,6 +521,40 @@
             link.download = `collage-${timestamp}.png`;
             link.href = resultCanvas.toDataURL('image/png');
             link.click();
+        });
+
+        openBtn.addEventListener('click', () => {
+            const imageData = resultCanvas.toDataURL('image/png');
+            const newWindow = window.open();
+            if (newWindow) {
+                newWindow.document.write(`
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <title>Collage</title>
+                        <style>
+                            body { 
+                                margin: 0; 
+                                display: flex; 
+                                justify-content: center; 
+                                align-items: center; 
+                                min-height: 100vh; 
+                                background: #000; 
+                            }
+                            img { 
+                                max-width: 100%; 
+                                max-height: 100vh; 
+                                object-fit: contain; 
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <img src="${imageData}" alt="Collage">
+                    </body>
+                    </html>
+                `);
+                newWindow.document.close();
+            }
         });
     </script>
 </body>
