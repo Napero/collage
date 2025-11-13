@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Combinar Fotos - Photo Collage</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 800px;
+            width: 100%;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 2em;
+            text-align: center;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 0.9em;
+        }
+
+        .upload-area {
+            border: 3px dashed #667eea;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+            background: #f8f9ff;
+        }
+
+        .upload-area:hover {
+            border-color: #764ba2;
+            background: #f0f1ff;
+        }
+
+        .upload-area.dragover {
+            border-color: #764ba2;
+            background: #e8e9ff;
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+
+        .upload-text {
+            color: #667eea;
+            font-weight: 600;
+            font-size: 1.1em;
+            margin-bottom: 5px;
+        }
+
+        .upload-hint {
+            color: #999;
+            font-size: 0.9em;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .image-count {
+            text-align: center;
+            margin: 20px 0;
+            font-weight: 600;
+            color: #667eea;
+            font-size: 1.1em;
+        }
+
+        .preview-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 10px;
+            margin: 20px 0;
+            max-height: 300px;
+            overflow-y: auto;
+            padding: 10px;
+            background: #f8f9ff;
+            border-radius: 10px;
+        }
+
+        .preview-item {
+            position: relative;
+            aspect-ratio: 1;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .preview-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .remove-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(255, 0, 0, 0.8);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            cursor: pointer;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.3s;
+        }
+
+        .remove-btn:hover {
+            background: rgba(255, 0, 0, 1);
+        }
+
+        .controls {
+            margin: 20px 0;
+        }
+
+        .control-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+        }
+
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            cursor: pointer;
+            background: white;
+            transition: border-color 0.3s;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+
+        button {
+            flex: 1;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 10px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #e0e0e0;
+            color: #666;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: #d0d0d0;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .result-area {
+            margin-top: 30px;
+            text-align: center;
+            display: none;
+        }
+
+        .result-area.show {
+            display: block;
+        }
+
+        #resultCanvas {
+            max-width: 100%;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            margin-top: 20px;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 20px 0;
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .loading.show {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 10px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 20px;
+            }
+
+            h1 {
+                font-size: 1.5em;
+            }
+
+            .upload-area {
+                padding: 30px 20px;
+            }
+
+            .button-group {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📸 Combinar Fotos</h1>
+        <p class="subtitle">Sube tus fotos y combínalas en una sola imagen</p>
+
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📁</div>
+            <div class="upload-text">Haz clic o arrastra fotos aquí</div>
+            <div class="upload-hint">Sube todas las fotos que quieras</div>
+        </div>
+        <input type="file" id="fileInput" accept="image/*" multiple>
+
+        <div class="image-count" id="imageCount">No hay fotos seleccionadas</div>
+
+        <div class="preview-grid" id="previewGrid"></div>
+
+        <div class="controls">
+            <div class="control-group">
+                <label for="layoutSelect">Modo de combinación:</label>
+                <select id="layoutSelect">
+                    <option value="vertical">Vertical (una debajo de otra)</option>
+                    <option value="grid">Matriz cuadrada (grid automático)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="button-group">
+            <button class="btn-secondary" id="clearBtn">Limpiar todo</button>
+            <button class="btn-primary" id="combineBtn" disabled>Combinar fotos</button>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <div>Procesando imágenes...</div>
+        </div>
+
+        <div class="result-area" id="resultArea">
+            <h2 style="color: #333; margin-bottom: 15px;">✨ Resultado</h2>
+            <canvas id="resultCanvas"></canvas>
+            <div class="button-group" style="margin-top: 20px;">
+                <button class="btn-primary" id="downloadBtn">Descargar imagen</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedImages = [];
+
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const previewGrid = document.getElementById('previewGrid');
+        const imageCount = document.getElementById('imageCount');
+        const combineBtn = document.getElementById('combineBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const layoutSelect = document.getElementById('layoutSelect');
+        const resultArea = document.getElementById('resultArea');
+        const resultCanvas = document.getElementById('resultCanvas');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const loading = document.getElementById('loading');
+
+        // Upload area click
+        uploadArea.addEventListener('click', () => fileInput.click());
+
+        // Drag and drop
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.classList.add('dragover');
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.classList.remove('dragover');
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.classList.remove('dragover');
+            handleFiles(e.dataTransfer.files);
+        });
+
+        // File input change
+        fileInput.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+
+        function handleFiles(files) {
+            const imageFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
+            
+            imageFiles.forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        selectedImages.push({
+                            src: e.target.result,
+                            img: img,
+                            file: file
+                        });
+                        updatePreview();
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function updatePreview() {
+            previewGrid.innerHTML = '';
+            imageCount.textContent = `${selectedImages.length} foto${selectedImages.length !== 1 ? 's' : ''} seleccionada${selectedImages.length !== 1 ? 's' : ''}`;
+            combineBtn.disabled = selectedImages.length === 0;
+
+            selectedImages.forEach((imageData, index) => {
+                const previewItem = document.createElement('div');
+                previewItem.className = 'preview-item';
+                
+                const img = document.createElement('img');
+                img.src = imageData.src;
+                
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'remove-btn';
+                removeBtn.innerHTML = '×';
+                removeBtn.onclick = () => removeImage(index);
+                
+                previewItem.appendChild(img);
+                previewItem.appendChild(removeBtn);
+                previewGrid.appendChild(previewItem);
+            });
+        }
+
+        function removeImage(index) {
+            selectedImages.splice(index, 1);
+            updatePreview();
+            resultArea.classList.remove('show');
+        }
+
+        clearBtn.addEventListener('click', () => {
+            selectedImages = [];
+            updatePreview();
+            resultArea.classList.remove('show');
+            fileInput.value = '';
+        });
+
+        combineBtn.addEventListener('click', async () => {
+            if (selectedImages.length === 0) return;
+
+            loading.classList.add('show');
+            resultArea.classList.remove('show');
+
+            // Small delay to show loading animation
+            await new Promise(resolve => setTimeout(resolve, 100));
+
+            const layout = layoutSelect.value;
+            
+            if (layout === 'vertical') {
+                combineVertical();
+            } else {
+                combineGrid();
+            }
+
+            loading.classList.remove('show');
+            resultArea.classList.add('show');
+            resultArea.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        });
+
+        function combineVertical() {
+            const maxWidth = Math.max(...selectedImages.map(img => img.img.width));
+            const totalHeight = selectedImages.reduce((sum, img) => sum + img.img.height, 0);
+
+            resultCanvas.width = maxWidth;
+            resultCanvas.height = totalHeight;
+
+            const ctx = resultCanvas.getContext('2d');
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, maxWidth, totalHeight);
+
+            let currentY = 0;
+            selectedImages.forEach(imageData => {
+                const img = imageData.img;
+                const x = (maxWidth - img.width) / 2;
+                ctx.drawImage(img, x, currentY, img.width, img.height);
+                currentY += img.height;
+            });
+        }
+
+        function combineGrid() {
+            const numImages = selectedImages.length;
+            const gridSize = Math.ceil(Math.sqrt(numImages));
+            
+            // Find max dimensions to make cells uniform
+            const maxWidth = Math.max(...selectedImages.map(img => img.img.width));
+            const maxHeight = Math.max(...selectedImages.map(img => img.img.height));
+            const cellSize = Math.max(maxWidth, maxHeight);
+
+            resultCanvas.width = gridSize * cellSize;
+            resultCanvas.height = gridSize * cellSize;
+
+            const ctx = resultCanvas.getContext('2d');
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, resultCanvas.width, resultCanvas.height);
+
+            selectedImages.forEach((imageData, index) => {
+                const img = imageData.img;
+                const row = Math.floor(index / gridSize);
+                const col = index % gridSize;
+                
+                const scale = Math.min(cellSize / img.width, cellSize / img.height);
+                const scaledWidth = img.width * scale;
+                const scaledHeight = img.height * scale;
+                
+                const x = col * cellSize + (cellSize - scaledWidth) / 2;
+                const y = row * cellSize + (cellSize - scaledHeight) / 2;
+                
+                ctx.drawImage(img, x, y, scaledWidth, scaledHeight);
+            });
+        }
+
+        downloadBtn.addEventListener('click', () => {
+            const link = document.createElement('a');
+            const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+            link.download = `collage-${timestamp}.png`;
+            link.href = resultCanvas.toDataURL('image/png');
+            link.click();
+        });
+    </script>
+</body>
+</html>
